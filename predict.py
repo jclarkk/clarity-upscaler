@@ -26,6 +26,7 @@ import time
 import cv2
 import mimetypes
 import subprocess
+import pillow_avif
 
 from cog import BasePredictor, Input, Path
 
@@ -259,6 +260,14 @@ class Predictor(BasePredictor):
         pattern: bool = Input(
             description="Upscale a pattern with seamless tiling",
             default=False,
+        ),
+        output_directory: str = Input(
+            description="Output directory",
+            default=None,
+        ),
+        output_filename: str = Input(
+            description="Output filename",
+            default=None,
         ),
         output_format: str = Input(
             description="Format of the output images",
@@ -558,7 +567,13 @@ class Predictor(BasePredictor):
 
                 imageObject = imageObject.filter(kernel_filter)
 
-            optimised_file_path = Path(f"{seed}-{uuid.uuid1()}.{output_format}")
+            if output_filename:
+                optimised_file_path = Path(f"{output_filename}.{output_format}")
+            else:
+                optimised_file_path = Path(f"{seed}-{uuid.uuid1()}.{output_format}")
+
+            if output_directory:
+                optimised_file_path = os.path.join(output_directory, optimised_file_path)
 
             if output_format in ["webp", "jpg"]:
                 imageObject.save(
