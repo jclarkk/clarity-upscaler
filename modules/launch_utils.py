@@ -319,8 +319,17 @@ def requirements_met(requirements_file):
 
 
 def prepare_environment():
-    torch_index_url = os.environ.get('TORCH_INDEX_URL', "https://download.pytorch.org/whl/cu118")
-    torch_command = os.environ.get('TORCH_COMMAND', f"pip install torch==2.0.1 torchvision==0.15.2 --extra-index-url {torch_index_url}")
+    cuda_version = os.environ.get('TORCH_CUDA_ARCH_LIST', '')
+    if '12' in cuda_version or os.environ.get('FORCE_CUDA', '') == '12.4':
+        # CUDA 12.4 wheels
+        torch_index_url = os.environ.get('TORCH_INDEX_URL', "https://download.pytorch.org/whl/cu124")
+        torch_command = os.environ.get('TORCH_COMMAND',
+                                       f"pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url {torch_index_url}")
+    else:
+        # fallback to CUDA 11.8 wheels (for older users)
+        torch_index_url = os.environ.get('TORCH_INDEX_URL', "https://download.pytorch.org/whl/cu118")
+        torch_command = os.environ.get('TORCH_COMMAND',
+                                       f"pip install torch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 --index-url {torch_index_url}")
     if args.use_ipex:
         if platform.system() == "Windows":
             # The "Nuullll/intel-extension-for-pytorch" wheels were built from IPEX source for Intel Arc GPU: https://github.com/intel/intel-extension-for-pytorch/tree/xpu-main
@@ -343,8 +352,6 @@ def prepare_environment():
             torch_command = os.environ.get('TORCH_COMMAND', f"pip install torch==2.0.0a0 intel-extension-for-pytorch==2.0.110+gitba7f6c1 --extra-index-url {torch_index_url}")
     requirements_file = os.environ.get('REQS_FILE', "requirements_versions.txt")
 
-    xformers_package = os.environ.get('XFORMERS_PACKAGE', 'xformers==0.0.22')
-    print("xformers_package", xformers_package)
     clip_package = os.environ.get('CLIP_PACKAGE', "https://github.com/openai/CLIP/archive/d50d76daa670286dd6cacf3bcd80b5e4823fc8e1.zip")
     openclip_package = os.environ.get('OPENCLIP_PACKAGE', "https://github.com/mlfoundations/open_clip/archive/bb6e834e9c70d9c27d0dc3ecedeebeaeb1ffad6b.zip")
 
@@ -407,7 +414,7 @@ def prepare_environment():
         startup_timer.record("install open_clip")
 
     if (not is_installed("xformers") or args.reinstall_xformers) and args.xformers:
-        run_pip(f"install -U -I --no-deps {xformers_package}", "xformers")
+        run_pip(f"install xformers --index-url https://download.pytorch.org/whl/cu124", "xformers")
         startup_timer.record("install xformers")
 
     if not is_installed("ngrok") and args.ngrok:
